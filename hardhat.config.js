@@ -24,7 +24,7 @@ module.exports = {
     hardhat: {
     },
     rinkeby: {
-      url:"https://eth-rinkeby.alchemyapi.io/v2/1GVGXFzHwEvc2lbKzZaFAJ9zh6uAGX4k",
+      url:"https://eth-rinkeby.alchemyapi.io/v2/",
       accounts: [PRIVATE_KEY],
       gasPrice: GAS_PRICE,
       blockGasLimit: gasLimit
