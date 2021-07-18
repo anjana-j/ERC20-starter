@@ -1,7 +1,7 @@
 {
-  "name": "yaka-starter",
+  "name": "erc20-starter",
   "version": "1.0.0",
-  "description": "https://medium.com/pinata/how-to-create-layer-2-nfts-with-polygon-and-ipfs-aef998ff8ef2",
+  "description": "ERC20 starter with daily and Global limit set",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
