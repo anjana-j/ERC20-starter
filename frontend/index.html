@@ -49,16 +49,16 @@
           <div class="col-md-12 text-center">
             <h1>WattToken Faucet</h1>
           </div>
-          <div class="col-md-12">
+          <!-- <div class="col-md-12">
             <label for="walletAddr" class="form-label">Wallet Address</label>
             <input type="text" class="form-control" id="walletAddr" placeholder="0x0">
-          </div>
+          </div> -->
           <div class="col-md-12">
             <label for="tokenQty" class="form-label">Required Tokens</label>
-            <input type="text" class="form-control" id="tokenQty" placeholder="100">
+            <input type="text" class="form-control" id="tokenQty" placeholder="100" value="">
           </div>
           <div class="col-md-12 text-center">
-            <input type="submit" class="btn btn-primary" id="submit" value="Gimme 'WATT'"  onclick="checkField('tokenQty');" />
+            <button type="button" id="submit" class="btn btn-primary">Gimme 'WATT'</button>
           </div>
         </form>
 
@@ -70,7 +70,6 @@
             <p>Transaction Status : </p>
         </div>
         <div id="txStatus" class="col-md-12">
-            <img id="loader" style="display:none" src="//chimplyimage.appspot.com/images/samples/classic-spinner/animatedCircle.gif" />
 
         </div>
       </div>
@@ -96,20 +95,8 @@
 
   <script type="text/javascript">
 
-    function checkField(id) {
+    let tokenName, symbol, dailyLimit, globalLimit, initialSupply, decimals, owner, walletOwner;
 
-        var field = document.getElementById(id);
-        if (isNaN(field.value)) {
-            alert('Required Tokens is not a number');
-        }
-
-    }
-
-
-    let tokenName, symbol, dailyLimit, globalLimit, initialSupply, decimals, owner;
-
-    const PKEY = "";
-    
     const WattABI = [
     {
       "inputs": [],
@@ -183,6 +170,31 @@
         }
       ],
       "name": "Transfer",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "balance",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "WalletBalance",
       "type": "event"
     },
     {
@@ -397,11 +409,6 @@
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "recipient",
-          "type": "address"
-        },
-        {
           "internalType": "uint256",
           "name": "amount",
           "type": "uint256"
@@ -481,12 +488,12 @@
       "inputs": [
         {
           "internalType": "address",
-          "name": "recipient",
+          "name": "_to",
           "type": "address"
         },
         {
           "internalType": "uint256",
-          "name": "amount",
+          "name": "_amount",
           "type": "uint256"
         }
       ],
@@ -544,13 +551,10 @@
       "type": "function"
     }
   ];
-
-    const WattContractAddr = "0xF9669fcBE8f8162b28716902f32fDF66C5a4d2c0";
-
-    const provider     = new ethers.providers.JsonRpcProvider("");
-    //const signer       = provider.getSigner();
-    const signer       = new ethers.Wallet(PKEY, provider);
-    const WattContract = new ethers.Contract(WattContractAddr,WattABI,provider);
+  
+    const provider         = new ethers.providers.JsonRpcProvider("http://127.0.0.1:8545/");
+    const WattContractAddr = "";
+    const WattContract     = new ethers.Contract(WattContractAddr,WattABI,provider);
 
     const loadContract = async () => {
 
@@ -581,63 +585,64 @@
 
     loadContract();
 
-
-
     document.getElementById("submit").addEventListener('click',function (e) {
 
         e.preventDefault();
 
-        function showSpinner() {
-            document.getElementById('loader').style.display = 'block';
-        }
+        var field = document.getElementById("tokenQty");
 
-        function hideSpinner() {
-            document.getElementById('loader').style.display = 'none';
-        }
 
-        const contractSigner = WattContract.connect(signer);
-        
-        let walletAddr  = document.getElementById('walletAddr').value;
-        let tokenQty    = document.getElementById('tokenQty').value;
+        if (isNaN(field.value) || field.value.length == 0) {
+            alert('Required Tokens is not a number');
+        } else {
+
+        let tokenQty    = field.value;
         let status      = document.getElementById("txStatus");
 
-        let walletAct   = ethers.utils.isAddress(walletAddr);
+        status.innerHTML = "Processing" + "<br />";
 
-        if(walletAct == true) {
+        const mintTokens = async () => {
 
-            status.innerHTML = "Processing" + "<br />";
+          try {
 
-            const mintTokens = async () => {
+            if (typeof window.ethereum !== 'undefined' || (typeof window.web3 !== 'undefined')) {
 
-                try {
+              const provider       = new ethers.providers.Web3Provider(window.ethereum);
 
-                    let minting = await contractSigner.mint(walletAddr, tokenQty);
+              // Prompt user for account connections
+              await provider.send("eth_requestAccounts", []);
 
-                    status.innerHTML += "Tokens minted successfully" + "<br />";
-                    status.innerHTML += minting.hash;
+              const signer         = provider.getSigner();
+              const signedContract = new ethers.Contract(WattContractAddr,WattABI,signer);
+              const walletAddr     = await signer.getAddress();
 
-                    console.log(minting);
-                    
-                } catch(err) {
-                    
-                    status.innerHTML = err;
-                    console.log(err);
+              console.log(walletAddr);
 
-                } finally {
-                    
-                }
+              let minting = await signedContract.mint(tokenQty);
+
+              status.innerHTML += "Tokens minted successfully" + "<br />";
+              status.innerHTML += minting.hash;
+
+              console.log(minting);
+
             }
+              
+          } catch(err) {
 
-            mintTokens();
+              status.innerHTML = "Error" + "<br />";
+              status.innerHTML += err.data.message;
+              console.log(err);
 
-        } else {
-            alert("Wallet Address not valid");
+          } 
+
         }
+
+        mintTokens();
+
+      }
 
     }); 
     
-
-
   </script>
 
 </body>

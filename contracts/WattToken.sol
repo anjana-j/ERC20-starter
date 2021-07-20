@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.4;
 pragma abicoder v2;
 
 import "hardhat/console.sol";
@@ -19,9 +19,9 @@ contract WattToken is ERC20, Ownable {
     string tokenName   = "WattToken";
     string tokenSymbol = "WATT";
     
-    uint initialSupply      = 1000000000    *   (10 ** decimals()); // 1 billion
-    uint public globalLimit = 10000000      *   (10 ** decimals()); // 10 million
-    uint public dailyLimit  = 100000        *   (10 ** decimals()); // 100K
+    uint initialSupply      = 100000000 * (10 ** decimals()); // 100 million
+    uint public globalLimit = 10000000  * (10 ** decimals()); // 10 million
+    uint public dailyLimit  = 100000    * (10 ** decimals()); // 100K
 
     struct dailyWalletBalance {
         uint    totalBalance;
@@ -30,6 +30,12 @@ contract WattToken is ERC20, Ownable {
     }
 
     mapping(address => dailyWalletBalance) walletBalanceCheck;
+
+    event WalletBalance(
+        address owner, 
+        uint balance, 
+        uint timestamp
+    );
 
     modifier validAddr(address to) {
         require(to != address(0x0));
@@ -50,15 +56,15 @@ contract WattToken is ERC20, Ownable {
         return 5;
     }
 
-    // minting tokens admin Only
+    // minting tokens
     function mint(
-        address recipient, 
         uint256 amount
     ) 
-    public 
-    validAddr(recipient) 
-    onlyOwner
+    public
+    validAddr(msg.sender)  
     returns (bool) {
+
+        address recipient = msg.sender;
 
         // set/ reset daily wallet balance
         if (block.timestamp > walletBalanceCheck[recipient].timestamp + 24 hours) {
@@ -82,11 +88,30 @@ contract WattToken is ERC20, Ownable {
 
         // ~ global balance is managing by ERC20 BalanceOf function
 
-        //return super.transfer(recipient, amount * (10 ** decimals()));
         _mint(recipient, amount * (10 ** decimals()));
+        emit WalletBalance(recipient, amount, block.timestamp);
+
         return true;
     }
-    
+
+
+    // overriding transfer function to keep the wallet balance in global limit
+    function transfer(
+        address _to, 
+        uint256 _amount
+    ) 
+    public 
+    override
+    returns (bool) {
+
+        uint256 globalBalance;
+        globalBalance = balanceOf(_to) + _amount * (10 ** decimals()); // existing balance + amount sending
+        require(globalBalance <= globalLimit, 'Cannot have tokens more than the Global Limit');
+        
+        super.transfer(_to, _amount * (10 ** decimals()));
+        emit WalletBalance(_to, _amount, block.timestamp);
+        return true;
+    }
 
     // other admin only functions
 
@@ -94,8 +119,7 @@ contract WattToken is ERC20, Ownable {
         address userWallet
     ) 
     public 
-    view 
-    onlyOwner 
+    view  
     returns(uint256, uint256) {
         
         uint256 userWalletBalance = walletBalanceCheck[userWallet].totalBalance * (10 ** decimals());

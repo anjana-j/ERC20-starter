@@ -8,12 +8,11 @@ describe("WattToken Contract", function() {
   let name, symbol, dailyLimit, globalLimit, initialSupply, decimals, owner;
   let newMintAmount, extraMintAmount;
 
-  setDecimals    = 5;
-  setGlobalLimit = 15;
-  setDailyLimit  = 10;
-  
+  setDecimals     = 5;
 
-  // new mint amount
+  // setting limits for testing purposes
+  setGlobalLimit  = 15;
+  setDailyLimit   = 10;
   newMintAmount   = 5;
   extraMintAmount = 1;
 
@@ -42,7 +41,6 @@ describe("WattToken Contract", function() {
       "DailyLimit       : ",dailyLimit.toNumber(), "\n"
     );
 
-
   });
 
 
@@ -66,45 +64,46 @@ describe("WattToken Contract", function() {
 
   });
 
+  // ---- daily limit testing
 
   describe("Test for 'daily minting' values", function () {
 
     let customer1Balance, customer2Balance, customer3Balance;
 
-    it("Should maximum mint daily limit only for Account #1", async function () {
+    it("Should maximum mint 'dailyLimit' only for Account #1", async function () {
 
-      await WattContract.mint(customer1.address, setDailyLimit);
+      await WattContract.connect(customer1).mint(setDailyLimit);
       customer1Balance = await WattContract.getDailyWalletBalance(customer1.address);
       expect(customer1Balance[0]).to.equal(setDailyLimit * (10 ** setDecimals));
     });
 
 
-    it("Should give 'daily limit exceeded' Error for Account #1", async function () {
+    it("Should return 'daily limit exceeded' error for Account #1", async function () {
 
       await expect(
-        WattContract.mint(customer1.address, extraMintAmount)
+        WattContract.connect(customer1).mint(extraMintAmount)
       ).to.be.revertedWith("Your Daily Limit exceeded");
       
     });
 
-    it("Should mint maximum daily limit for Account #2", async function () {
+    it("Should mint maximum 'dailyLimit' for Account #2", async function () {
 
-      await WattContract.mint(customer2.address, setDailyLimit);
+      await WattContract.connect(customer2).mint(setDailyLimit);
       customer2Balance = await WattContract.getDailyWalletBalance(customer2.address);
       expect(customer2Balance[0]).to.equal(setDailyLimit * (10 ** setDecimals));
     });
 
 
-    it("Should give 'daily limit exceeded' Error for Account #2", async function () {
+    it("Should return 'daily limit exceeded' Error for Account #2", async function () {
 
       await expect(
-        WattContract.mint(customer2.address, extraMintAmount)
+        WattContract.connect(customer2).mint(extraMintAmount)
       ).to.be.revertedWith("Your Daily Limit exceeded");
       
     });
 
 
-    it("Should give Account #3 balance as 0", async function () {
+    it("Should return Account #3 balance as 0", async function () {
 
       customer3Balance = await WattContract.getDailyWalletBalance(customer3.address);
       expect(customer3Balance[0]).to.equal(0);
@@ -112,6 +111,7 @@ describe("WattToken Contract", function() {
     });
 
   });
+
 
   // ---- global balance testing
 
@@ -148,12 +148,6 @@ describe("WattToken Contract", function() {
       await WattContract.lastTransferDateUpdate(newPrevDate, customer1.address);
       getNewLastTransferDateC1Arr = await WattContract.getDailyWalletBalance(customer1.address);
 
-      // console.log("\n",
-      //   "Account 1 : \n",
-      //   "prevLastTransferDate : ",getLastTransferDateC1.toNumber(), "\n",
-      //   "newLastTransferDate  : ",getNewLastTransferDateC1Arr[1].toNumber(), "\n"
-      // );
-
     });
 
 
@@ -162,28 +156,28 @@ describe("WattToken Contract", function() {
     });
 
 
-    it("Should match Account #1 global balance for prev daily limit only", async function () {
+    it("Should match Account #1 globalalance for prev dailyLimit only", async function () {
       expect(await WattContract.balanceOf(customer1.address)).to.equal(getLastTransferBalC1);
     });
 
 
-    it("Should mint a new amount of 5 for account #1", async function () {
-      await WattContract.mint(customer1.address, newMintAmount);
+    it("Should mint a new amount for account #1", async function () {
+      await WattContract.connect(customer1).mint(newMintAmount);
 
       getNewLastTransferDateC1Arr = await WattContract.getDailyWalletBalance(customer1.address);
       expect(getNewLastTransferDateC1Arr[0].toNumber()).to.equal(newMintAmount * (10 ** setDecimals));
     });
 
 
-    it("Should match global Balance of account #1 for 15", async function () {
+    it("Should match global Balance of account #1 for 'globalLimit'", async function () {
       expect(await WattContract.balanceOf(customer1.address)).to.equal( setGlobalLimit * (10 ** setDecimals));
     });
 
 
-    it("Should give 'global limit exceeded' Error for Account #1", async function () {
+    it("Should return 'global limit exceeded' Error for Account #1", async function () {
 
       await expect(
-        WattContract.mint(customer1.address, extraMintAmount)
+        WattContract.connect(customer1).mint(extraMintAmount)
       ).to.be.revertedWith("Your Global Limit exceeded");
       
     });
@@ -191,43 +185,43 @@ describe("WattToken Contract", function() {
     // ---------------
 
 
-    it("Should match Account #2 global balance for prev daily limit only", async function () {
+    it("Should match Account #2 global balance for prev 'dailyLimit' only", async function () {
       expect(await WattContract.balanceOf(customer2.address)).to.equal(getLastTransferBalC2);
     });
 
 
-    it("Should give 'daily limit exceeded' Error for Account #2 - time is not updated", async function () {
+    it("Should return 'daily limit exceeded' Error for Account #2 [Time NOT UPDATED]", async function () {
       await expect(
-        WattContract.mint(customer2.address, extraMintAmount)
+        WattContract.connect(customer2).mint(extraMintAmount)
       ).to.be.revertedWith("Your Daily Limit exceeded");
     });
 
 
-    it("Should mint a new amount of 5 for account # - time Updated", async function () {
+    it("Should mint a new amount for account # [Time UPDATED]", async function () {
 
       await WattContract.lastTransferDateUpdate(newPrevDate, customer2.address);
-      await WattContract.mint(customer2.address, newMintAmount);
+      await WattContract.connect(customer2).mint(newMintAmount);
 
       getNewLastTransferDateC2Arr = await WattContract.getDailyWalletBalance(customer2.address);
       expect(getNewLastTransferDateC2Arr[0].toNumber()).to.equal(newMintAmount * (10 ** setDecimals));
     });
 
 
-    it("Should match global Balance of account #2 for 15", async function () {
-      expect(await WattContract.balanceOf(customer2.address)).to.equal( setGlobalLimit * (10 ** setDecimals));
+    it("Should match global Balance of account #2 for 'globalLimit'", async function () {
+      expect(await WattContract.balanceOf(customer2.address)).to.equal(setGlobalLimit * (10 ** setDecimals));
     });
 
 
-    it("Should give 'global limit exceeded' Error for Account #2", async function () {
+    it("Should return 'global limit exceeded' Error for Account #2", async function () {
 
       await expect(
-        WattContract.mint(customer2.address, extraMintAmount)
+        WattContract.connect(customer2).mint(extraMintAmount)
       ).to.be.revertedWith("Your Global Limit exceeded");
       
     });
 
 
-    it("Should give Account #3 balance as 0", async function () {
+    it("Should return Account #3 balance as 0", async function () {
 
       expect(getLastTransferBalC3).to.equal(0);
       
@@ -235,4 +229,67 @@ describe("WattToken Contract", function() {
 
   });
 
+  // transfer function testing
+
+  describe("Test for 'transfer' option not exceeding the global limit", function () {
+
+    let customer1LastBalance, customer2LastBalance, customer3LastBalance;
+
+
+    it("Should get all Account balances", async function () {
+
+      customer1LastBalance = await WattContract.balanceOf(customer1.address);
+      customer2LastBalance = await WattContract.balanceOf(customer2.address);
+      customer3LastBalance = await WattContract.balanceOf(customer3.address);
+
+      console.log("\n",
+
+        "Account #1 Balance", customer1LastBalance.toNumber(), "\n",
+        "Account #2 Balance", customer2LastBalance.toNumber(), "\n",
+        "Account #3 Balance", customer3LastBalance.toNumber(), "\n",
+
+      );
+
+    });
+
+    it("Should not able to transfer extra amount 'more than' the 'globalLimit' from Account #1 to Account #2", async function () {
+      
+      await expect(
+        WattContract.connect(customer1).transfer(customer2.address, extraMintAmount)
+      ).to.be.revertedWith("Cannot have tokens more than the Global Limit");
+
+    });
+
+    it("Should not able to transfer extra amount 'more than' the 'globalLimit' from Account #2 to Account #1", async function () {
+      
+      await expect(
+        WattContract.connect(customer2).transfer(customer1.address, extraMintAmount)
+      ).to.be.revertedWith("Cannot have tokens more than the Global Limit");
+
+    });
+
+    it("Should not able to transfer an amount more than 'globalLimit' from Contract Owner to Account #3", async function () {
+      
+      await expect(
+        WattContract.connect(contractOwner).transfer(
+          customer3.address, 
+          (setGlobalLimit + extraMintAmount))
+      ).to.be.revertedWith("Cannot have tokens more than the Global Limit");
+      
+    });
+
+
+    it("Should able to transfer 'less than or equal' amount to 'globalLimit' from Account #1 to Account #3", async function () {
+      
+      expect(await WattContract.connect(customer1).transfer(
+        customer3.address, 
+        setGlobalLimit)
+      );
+    });
+
+
+  });
+
 });
+
+
